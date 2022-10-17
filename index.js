@@ -4,9 +4,11 @@ const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const fileUpload = require('express-fileupload');
 
-const BlogPost = require('./models/BlogPost');
-
-const path = require('path');
+const newPostController = require('./controllers/newPost');
+const storePostController = require('./controllers/storePost');
+const homeController = require('./controllers/home');
+const getPostController = require('./controllers/getPost');
+const validateMiddleware = require('./middlewares/validationMiddleware');
 
 const PORT = 7000;
 
@@ -21,53 +23,15 @@ app.use(express.static('public'));
 
 app.use(fileUpload());
 
-// MIDDLEWARE FUNCTION FOR /post/store
-const validateMiddleware = (req, res, next) => {
-  if (req.files == 'null' || req.body == 'null' || req.body.title == 'null') {
-    return res.redirect('/posts/new');
-  }
-  next;
-};
-
 app.use('/posts/store', validateMiddleware);
 
-app.get('/', async (req, res) => {
-  const blogposts = await BlogPost.find({});
-  res.render('index', {
-    blogposts,
-  });
-});
+app.get('/', homeController);
 
-app.get('/about', (req, res) => {
-  res.render('about');
-});
+app.get('/post/:id', getPostController);
 
-app.get('/contact', (req, res) => {
-  res.render('contact');
-});
+app.get('/posts/new', newPostController);
 
-app.get('/post/:id', async (req, res) => {
-  const { id } = req.params;
-  const blogpost = await BlogPost.findById(id);
-  res.render('post', {
-    blogpost,
-  });
-});
-
-app.get('/posts/new', (req, res) => {
-  res.render('create');
-});
-
-app.post('/posts/store', async (req, res) => {
-  let image = req.files.image;
-  image.mv(path.resolve(__dirname, 'public/img', image.name), async (error) => {
-    await BlogPost.create({
-      ...req.body,
-      image: '/img/' + image.name,
-    });
-    res.redirect('/');
-  });
-});
+app.post('/posts/store', storePostController);
 
 // CONNECTING TO DB
 mongoose.connect('mongodb://localhost/my_database', { useNewUrlParser: true });
